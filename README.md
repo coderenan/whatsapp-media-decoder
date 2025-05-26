@@ -34,16 +34,14 @@ O WhatsApp criptografa todas as mídias usando chaves derivadas via HKDF. Para d
 
 - Go 1.22 ou superior
 
+
 ### Crie um arquivo `.env` na raiz do projeto com o conteúdo:
 ```
 PORT=8080
 AUTH_SECRET=SecretToken
+CONVERT_AUDIO_TO_MP3=true
 ```
-
-### Rodar localmente
-
-Clone o projeto:
-
+### Clone o projeto:
 ```bash
 git clone https://github.com/coderenan/whatsapp-media-decoder.git
 cd whatsapp-media-decoder
