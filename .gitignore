@@ -1,0 +1,13 @@
+# binários
+*.exe
+*.out
+*.test
+
+# dependências locais
+/vendor/
+
+# arquivos gerados
+*.log
+
+# Go
+go.sum
