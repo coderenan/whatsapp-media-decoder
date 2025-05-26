@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"os/exec"
+	"strings"
 	"golang.org/x/crypto/hkdf"
 )
 
@@ -45,19 +48,18 @@ func DecodeMediaHandler(w http.ResponseWriter, r *http.Request) {
 
 	var mediaType []byte
 	switch {
-	case req.MimeType[:6] == "image/":
+	case strings.HasPrefix(req.MimeType, "image/"):
 		mediaType = []byte("WhatsApp Image Keys")
-	case req.MimeType[:6] == "audio/":
+	case strings.HasPrefix(req.MimeType, "audio/"):
 		mediaType = []byte("WhatsApp Audio Keys")
-	case req.MimeType[:6] == "video/":
+	case strings.HasPrefix(req.MimeType, "video/"):
 		mediaType = []byte("WhatsApp Video Keys")
-	case req.MimeType == "application/pdf" || req.MimeType[:11] == "application":
+	case req.MimeType == "application/pdf" || strings.HasPrefix(req.MimeType, "application/"):
 		mediaType = []byte("WhatsApp Document Keys")
 	default:
 		http.Error(w, fmt.Sprintf(`{"error":"Tipo de mídia não suportado: %s"}`, req.MimeType), http.StatusBadRequest)
 		return
 	}
-	
 
 	hkdfReader := hkdf.New(sha256.New, mediaKey, nil, mediaType)
 	expandedKey := make([]byte, 112)
@@ -87,8 +89,53 @@ func DecodeMediaHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	plaintext = plaintext[:len(plaintext)-padLen]
 
-	base64Media := base64.StdEncoding.EncodeToString(plaintext)
+	// === MP3 Audio ===
+	if strings.HasPrefix(req.MimeType, "audio/") {
+		tmpInput, err := os.CreateTemp("", "audio-*.ogg")
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"Erro ao criar arquivo temporário: %s"}`, err), http.StatusInternalServerError)
+			return
+		}
+		defer os.Remove(tmpInput.Name())
 
+		if _, err := tmpInput.Write(plaintext); err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"Erro ao escrever arquivo .ogg: %s"}`, err), http.StatusInternalServerError)
+			return
+		}
+		tmpInput.Close()
+
+		tmpOutput, err := os.CreateTemp("", "audio-*.mp3")
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"Erro ao criar arquivo de saída .mp3: %s"}`, err), http.StatusInternalServerError)
+			return
+		}
+		tmpOutput.Close()
+		defer os.Remove(tmpOutput.Name())
+
+		cmd := exec.Command("ffmpeg", "-y", "-i", tmpInput.Name(), "-acodec", "libmp3lame", tmpOutput.Name())
+		if err := cmd.Run(); err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"Erro na conversão ffmpeg: %s"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		mp3Data, err := os.ReadFile(tmpOutput.Name())
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"Erro ao ler arquivo MP3: %s"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		base64Media := base64.StdEncoding.EncodeToString(mp3Data)
+
+		respJSON := DecodeResponse{
+			Success: true,
+			Base64:  base64Media,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(respJSON)
+		return
+	}
+
+	base64Media := base64.StdEncoding.EncodeToString(plaintext)
 	respJSON := DecodeResponse{
 		Success: true,
 		Base64:  base64Media,
