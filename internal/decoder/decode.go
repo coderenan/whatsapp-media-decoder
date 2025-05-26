@@ -89,8 +89,9 @@ func DecodeMediaHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	plaintext = plaintext[:len(plaintext)-padLen]
 
-	// === MP3 Audio ===
-	if strings.HasPrefix(req.MimeType, "audio/") {
+	convertAudio := os.Getenv("CONVERT_AUDIO_TO_MP3") == "true"
+
+	if strings.HasPrefix(req.MimeType, "audio/") && convertAudio {
 		tmpInput, err := os.CreateTemp("", "audio-*.ogg")
 		if err != nil {
 			http.Error(w, fmt.Sprintf(`{"error":"Erro ao criar arquivo temporário: %s"}`, err), http.StatusInternalServerError)
@@ -125,7 +126,6 @@ func DecodeMediaHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		base64Media := base64.StdEncoding.EncodeToString(mp3Data)
-
 		respJSON := DecodeResponse{
 			Success: true,
 			Base64:  base64Media,
