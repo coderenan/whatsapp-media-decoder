@@ -70,6 +70,12 @@ func DecodeMediaHandler(w http.ResponseWriter, r *http.Request) {
 
 	iv := expandedKey[0:16]
 	cipherKey := expandedKey[16:48]
+
+	// Verifica se encData tem pelo menos 10 bytes antes de remover o MAC
+	if len(encData) < 10 {
+		http.Error(w, `{"error":"Mídia baixada é muito pequena ou inválida"}`, http.StatusInternalServerError)
+		return
+	}
 	ciphertext := encData[:len(encData)-10]
 
 	block, err := aes.NewCipher(cipherKey)
