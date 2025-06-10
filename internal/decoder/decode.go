@@ -82,6 +82,11 @@ func DecodeMediaHandler(w http.ResponseWriter, r *http.Request) {
 	plaintext := make([]byte, len(ciphertext))
 	mode.CryptBlocks(plaintext, ciphertext)
 
+	// Verifica se plaintext não está vazio antes de acessar o último byte
+	if len(plaintext) == 0 {
+		http.Error(w, `{"error":"Plaintext vazio após descriptografia"}`, http.StatusInternalServerError)
+		return
+	}
 	padLen := int(plaintext[len(plaintext)-1])
 	if padLen <= 0 || padLen > 16 || padLen > len(plaintext) {
 		http.Error(w, `{"error":"Padding inválido"}`, http.StatusInternalServerError)
