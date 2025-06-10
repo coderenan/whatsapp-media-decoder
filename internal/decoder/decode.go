@@ -83,7 +83,7 @@ func DecodeMediaHandler(w http.ResponseWriter, r *http.Request) {
 	mode.CryptBlocks(plaintext, ciphertext)
 
 	padLen := int(plaintext[len(plaintext)-1])
-	if padLen > 16 {
+	if padLen <= 0 || padLen > 16 || padLen > len(plaintext) {
 		http.Error(w, `{"error":"Padding inválido"}`, http.StatusInternalServerError)
 		return
 	}
