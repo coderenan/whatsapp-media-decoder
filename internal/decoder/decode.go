@@ -70,6 +70,12 @@ func DecodeMediaHandler(w http.ResponseWriter, r *http.Request) {
 
 	iv := expandedKey[0:16]
 	cipherKey := expandedKey[16:48]
+
+	// Verifica se encData tem pelo menos 10 bytes antes de remover o MAC
+	if len(encData) < 10 {
+		http.Error(w, `{"error":"Mídia baixada é muito pequena ou inválida"}`, http.StatusInternalServerError)
+		return
+	}
 	ciphertext := encData[:len(encData)-10]
 
 	block, err := aes.NewCipher(cipherKey)
@@ -82,6 +88,11 @@ func DecodeMediaHandler(w http.ResponseWriter, r *http.Request) {
 	plaintext := make([]byte, len(ciphertext))
 	mode.CryptBlocks(plaintext, ciphertext)
 
+	// Verifica se plaintext não está vazio antes de acessar o último byte
+	if len(plaintext) == 0 {
+		http.Error(w, `{"error":"Plaintext vazio após descriptografia"}`, http.StatusInternalServerError)
+		return
+	}
 	padLen := int(plaintext[len(plaintext)-1])
 	if padLen <= 0 || padLen > 16 || padLen > len(plaintext) {
 		http.Error(w, `{"error":"Padding inválido"}`, http.StatusInternalServerError)
