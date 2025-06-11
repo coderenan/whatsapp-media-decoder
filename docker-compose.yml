@@ -1,0 +1,11 @@
+services:
+  whatsapp-media-decoder:
+    build: .
+    container_name: whatsapp-media-decoder
+    ports:
+      - "8091:8091"
+    environment:
+      - AUTH_SECRET=SecretToken
+      - PORT=80
+      - CONVERT_AUDIO_TO_MP3=true #Caso queira converter os áudios ogg para .mp3 (Necessário ffmpeg - presente Dockerfile)
+    restart: unless-stopped
