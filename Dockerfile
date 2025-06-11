@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine
+FROM golang:1.23-alpine
 
 WORKDIR /app
 
@@ -6,6 +6,6 @@ COPY . .
 
 RUN go mod tidy
 
-EXPOSE 8080
+EXPOSE 8091
 
 CMD ["go", "run", "./cmd/server"]
